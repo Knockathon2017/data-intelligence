@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <title>Data int elligence</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,500,600,700,800" rel="stylesheet">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.0/css/font-awesome.min.css">
+    <link href="static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="static/css/mdb.min.css" rel="stylesheet">
+    <link href="static/css/style.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+    <!--Navbar-->
+    <nav class="navbar navbar-toggleable-md navbar-dark scrolling-navbar">
+        <div class="container" style="width: 100%;">
+            <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#collapseEx2" aria-controls="collapseEx2" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <a class="navbar-brand" href="data-intelligence.html">
+                <img src="static/img/gears.gif" class="gears">
+                <img src="static/img/logo.png">
+                <a href="/"><h3>Data Intelligence</h3></a>
+            </a>
+        </div>
+    </nav>
+    <!--/.Navbar-->
+
+          <div class="int-landing">
+            
+            <div class="container">
+            <div class="row"> 
+                <!-- <div class='col-md-1'></div> -->
+                <div class='col-md-12'> 
+                  <h1>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  &nbsp;&nbsp;&nbsp;&nbsp;
+                  &nbsp;&nbsp;&nbsp;Artificial Intelligence Toolkit : Components</h1>
+                                    
+
+                  <div class='aobdiv'></div>
+
+                </div>
+            </div>
+            </div>
+        </div>
+
+    <script type="text/javascript" src="static/js/jquery-3.1.1.min.js"></script>
+    <script type="text/javascript" src="static/js/tether.min.js"></script>
+    <script type="text/javascript" src="static/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="static/js/mdb.min.js"></script>
+
+    <script>
+    $(document).scroll(function(){
+        $('.navbar').fixed-top({
+              offset: {
+                top: $('header').height()
+              }
+        });
+      });
+    </script>
+
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script>
+$(document).ready(function () {
+            //build tree
+            function BuildVerticaLTree(treeData, treeContainerDom) {
+                var margin = { top: 40, right: 120, bottom: 20, left: 120 };
+                var width = 1000;
+                var height = 800;
+
+                var i = 0, duration = 750;
+                var tree = d3.layout.tree()
+                    .size([height, width]);
+                var diagonal = d3.svg.diagonal()
+                    .projection(function (d) { return [d.x, d.y]; });
+                var svg = d3.select(treeContainerDom).append("svg")
+                    .attr("width", width + margin.right + margin.left)
+                    .attr("height", height + margin.top + margin.bottom)
+                  .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                root = treeData;
+
+
+
+                update(root);
+                function update(source) {
+                    // Compute the new tree layout.
+                    var nodes = tree.nodes(root).reverse(),
+                        links = tree.links(nodes);
+                    // Normalize for fixed-depth.
+                    nodes.forEach(function (d) { d.y = d.depth * 100; });
+                    // Declare the nodes…
+                    var node = svg.selectAll("g.node")
+                        .data(nodes, function (d) { return d.id || (d.id = ++i); });
+                    // Enter the nodes.
+                    var nodeEnter = node.enter().append("g")
+                        .attr("class", "node")
+                        .attr("transform", function (d) {
+                            return "translate(" + source.x0 + "," + source.y0 + ")";
+                        }).on("click", nodeclick);
+                    nodeEnter.append("circle")
+                     .attr("r", 20)
+                     .on("click", function(d){
+      if (d.name == 'Image Data'){
+        window.open( 'http://localhost:5001/deepai', '_blank' );
+      }
+
+      if (d.name == 'Use-Cases'){
+        window.open( 'https://exzeo.hipchat.com/chat/user/4958631', '_blank' );
+      }
+
+
+    })
+                        .attr("stroke", function (d) { return d.children || d._children ? "steelblue" : "#00c13f"; })
+                        .style("fill", function (d) { return d.children || d._children ? "lightsteelblue" : "#fff"; });
+                    //.attr("r", 10)
+                    //.style("fill", "#fff");
+                    nodeEnter.append("text")
+                        .attr("y", function (d) {
+                            return d.children || d._children ? -18 : 18;
+                        })
+                        .attr("dy", ".35em")
+                        .attr("text-anchor", "middle")
+                        .text(function (d) { return d.name; })
+                        .style("fill-opacity", 1e-6);
+                    // Transition nodes to their new position.
+                    //horizontal tree
+                    var nodeUpdate = node.transition()
+                        .duration(duration)
+                        .attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; });
+                    nodeUpdate.select("circle")
+                        .attr("r", 10)
+                        .style("fill", function (d) { return d._children ? "lightsteelblue" : "#fff"; });
+                    nodeUpdate.select("text")
+                        .style("fill-opacity", 1);
+
+
+                    // Transition exiting nodes to the parent's new position.
+                    var nodeExit = node.exit().transition()
+                        .duration(duration)
+                        .attr("transform", function (d) { return "translate(" + source.x + "," + source.y + ")"; })
+                        .remove();
+                    nodeExit.select("circle")
+                        .attr("r", 1e-6);
+                    nodeExit.select("text")
+                        .style("fill-opacity", 1e-6);
+                    // Update the links…
+                    // Declare the links…
+                    var link = svg.selectAll("path.link")
+                        .data(links, function (d) { return d.target.id; });
+                    // Enter the links.
+                    link.enter().insert("path", "g")
+                        .attr("class", "link")
+
+
+                        .attr("d", function (d) {
+                            var o = { x: source.x0, y: source.y0 };
+                            return diagonal({ source: o, target: o });
+                        });
+                    // Transition links to their new position.
+                    link.transition()
+                        .duration(duration)
+                    .attr("d", diagonal);
+
+
+                    // Transition exiting nodes to the parent's new position.
+                    link.exit().transition()
+                        .duration(duration)
+                        .attr("d", function (d) {
+                            var o = { x: source.x, y: source.y };
+                            return diagonal({ source: o, target: o });
+                        })
+                        .remove();
+
+                    // Stash the old positions for transition.
+                    nodes.forEach(function (d) {
+                        d.x0 = d.x;
+                        d.y0 = d.y;
+                    });
+                }
+
+                // Toggle children on click.
+                function nodeclick(d) {
+                    if (d.children) {
+                        d._children = d.children;
+                        d.children = null;
+                    } else {
+                        d.children = d._children;
+                        d._children = null;
+                    }
+                    update(d);
+                }
+            }
+
+            var treeData =
+        {
+            "name": "AIT Components",
+            "_children": [
+                    
+                    {
+                        "name": "Deep Learning",
+                         "_children": [{
+                            "name": "Image Data",
+                            "_children": []}]
+                    },
+                    {
+                        "name": "Natural Language (Bots)",
+                        "_children": [{
+                            "name": "Database",
+                            "_children": []},
+                            {
+                            "name": "Use-Cases",
+                            "_children": []}]
+                    },
+                    {
+                        "name": "Descriptive Analysis",
+                        "_children": [{
+                            "name": "Explorations",
+                            "_children": []},{
+                            "name": "Visualisations",
+                            "_children": []}]
+                    },
+                    
+                  ]
+              };
+            BuildVerticaLTree(treeData, ".aobdiv");
+        });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+
+<form action="" name="f" method="POST" autocomplete="off">
+  <div id="area">
+    Data Int elligence : <br><br>
+
+    {% for img in doc['house'] %}
+      <div>
+        <div>
+              {{ img }}
+              <img src="static/images/{{ img | safe }}" width="200" height="200">
+              
+        </div>
+      </div>
+    {% endfor %}
+
+
+    <br>
+    <br>
+
+    <input autofocus type="text" size="70" 
+           name="image_name" id="tb" autocomplete="off" 
+           autocorrect="off" autocapitalize="off" 
+           spellcheck="false">
+
+
+
+    <input autofocus type="text" size="70" 
+           name="theme" id="tb" autocomplete="off" 
+           autocorrect="off" autocapitalize="off" 
+           spellcheck="false">
+
+    <input autofocus type="text" size="70" 
+           name="specific" id="tb" autocomplete="off" 
+           autocorrect="off" autocapitalize="off" 
+           spellcheck="false">
+
+    <br><br><br>
+    
+    {{ doc['output'] }}
+    {{ doc['theme'] }}
+
+
+  </div>
+  <input type="Submit" value="Submit" id="sub-button">
+</form>
+
+
+

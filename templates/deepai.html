@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <title>Data int elligence</title>
+
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,500,600,700,800" rel="stylesheet">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.0/css/font-awesome.min.css">
+    <link href="static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="static/css/mdb.min.css" rel="stylesheet">
+    <link href="static/css/style.css" rel="stylesheet">
+
+</head>
+
+<body>
+                <!--Navbar-->
+    <nav class="navbar navbar-toggleable-md navbar-dark scrolling-navbar">
+        <div class="container" style="width: 100%;">
+            <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#collapseEx2" aria-controls="collapseEx2" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <a class="navbar-brand" href="data-intelligence.html">
+                <img src="static/img/gears.gif" class="gears">
+                <img src="static/img/logo.png">
+                <a href="/"><h3>Data Intelligence</h3></a>
+            </a>
+        </div>
+    </nav>
+    <!--/.Navbar-->
+
+          <div class="int-landing"  >
+            <div class="container">
+            <div class='row'>
+                <h1>AIT : Deep Learning | Image Insights, (notebook)</h1>
+            </div>
+            </div>
+
+            
+            <div class="container">
+            <form action="/deepai" name="f3" method="POST" autocomplete="off">
+            <div class="row">
+                <div class="col-md-1"></div>
+                
+                <div class="col-md-6">
+                <br><br>
+                    <input type="text" name="query" placeholder="your query">
+                </div>
+                
+                <div class="col-md-4">
+                <br><br>
+                    <input type="Submit" value="Impress Me" class="btn-success">
+                </div>
+            </div>
+            </form>
+            </div>
+
+            <br><br>
+
+            {% if doc['results'] != '' %}
+            <div class="row">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+
+
+               <!--  <div id="loading"></div>
+                <div id="content"></div>
+ -->
+                <h4> Results for {{ doc['query'] }} </h4>
+                <br>
+                  <div class="gallery">
+                    {% for img in doc['results'] %}
+                    <div class="card cardone">
+                      <img class="card-img-top" src="static/images/{{ img | safe }}" width=300 height=300 alt="Card image cap">
+                      <div class="card-block">
+                        <p class="card-text">{{ img }}</p>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+              <br><br>
+              <br><br>
+            {% endif %}
+
+            <br><br>
+
+            <div class="container-fluid">
+              <div class="row">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+                  <h3>Datastream of Property Interior Images</h3>
+                  <div class="gallery">
+                    {% for img in doc['house1'] %}
+                    <div class="card cardone">
+                      <img class="card-img-top" src="static/images/{{ img | safe }}" width=300 height=300 alt="Card image cap">
+                      <div class="card-block">
+                        <p class="card-text">{{ img }}</p>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+                <br>
+                  <div class="gallery">
+                    {% for img in doc['house2'] %}
+                    <div class="card cardone">
+                      <img class="card-img-top" src="static/images/{{ img | safe }}" width=300 height=300 alt="Card image cap">
+                      <div class="card-block">
+                        <p class="card-text">{{ img }}</p>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+                  <br>
+                  <div class="gallery">
+                    {% for img in doc['house3'] %}
+                    <div class="card cardone">
+                      <img class="card-img-top" src="static/images/{{ img | safe }}" width=300 height=300 alt="Card image cap">
+                      <div class="card-block">
+                        <p class="card-text">{{ img }}</p>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+                  <br>
+                  <div class="gallery">
+                    {% for img in doc['house4'] %}
+                    <div class="card cardone">
+                      <img class="card-img-top" src="static/images/{{ img | safe }}" width=300 height=300 alt="Card image cap">
+                      <div class="card-block">
+                        <p class="card-text">{{ img }}</p>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+                  <br>
+                  <div class="gallery">
+                    {% for img in doc['house5'] %}
+                    <div class="card cardone">
+                      <img class="card-img-top" src="static/images/{{ img | safe }}" width=300 height=300 alt="Card image cap">
+                      <div class="card-block">
+                        <p class="card-text">{{ img }}</p>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+                  <br>
+                  <div class="gallery">
+                    {% for img in doc['house6'] %}
+                    <div class="card cardone">
+                      <img class="card-img-top" src="static/images/{{ img | safe }}" width=300 height=300 alt="Card image cap">
+                      <div class="card-block">
+                        <p class="card-text">{{ img }}</p>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+
+            </div>
+
+            <br><br><br><br>
+
+            <div class="container-fluid">
+              <div class="row">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+                  <!-- <h3>Adjuster Images (from Exzeo)</h3> -->
+                  <div class="gallery">
+                    {% for img in doc['adjusters'] %}
+                    <div class="card cardone">
+                      <img class="card-img-top" src="static/images/{{ img | safe }}" alt="Card image cap">
+                      <div class="card-block">
+                        <p class="card-text">{{ img }}</p>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <div class="container">
+
+            <form action="/deepai" name="f" method="POST" autocomplete="off">
+            <div class="row">
+                <div class="col-md-1"></div>
+                
+                <div class="col-md-6">
+                <br><br>
+                    <input type="text" name="image_name" placeholder="your input image">
+                </div>
+                
+                <div class="col-md-4">
+                <br><br>
+                    <input type="Submit" value="Impress Me" class="btn-success">
+                </div>
+            </div>
+            </form>
+            </div>
+
+
+
+            {% if doc['output'] != '' %}
+            <div class="search-result container">
+              <div class="container">
+              
+                <div class="row">
+                  <div class="col-md-5">
+                  <div class="card">
+                      <img class="card-img-top" src="static/images/{{ doc['input'] | safe }}" alt="Card image cap">
+                    </div>
+
+                </div>
+                  <div class="col-md-5">
+                            <p>Here are the (content + actions) for the image</p>
+                            {{ doc['output'] | safe }}
+                </div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            <br><br><br>
+
+
+
+
+          </div>
+
+    <script type="text/javascript" src="static/js/jquery-3.1.1.min.js"></script>
+    <script type="text/javascript" src="static/js/tether.min.js"></script>
+    <script type="text/javascript" src="static/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="static/js/mdb.min.js"></script>
+
+    <script>
+    // $(document).scroll(function(){
+    //     $('.navbar').fixed-top({
+    //           offset: {
+    //             top: $('header').height()
+    //           }
+    //     });
+    //   });
+
+    <script type="text/javascript">// <![CDATA[
+        function preloader(){
+            document.getElementById("loading").style.display = "none";
+            document.getElementById("content").style.display = "block";
+        }//preloader
+        window.onload = preloader;
+// ]]></script>
+    </script>
+
+</body>
+</html>

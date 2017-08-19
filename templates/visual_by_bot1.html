@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <style>
+  body {
+      margin:0px;
+      font-family:"GeoSans";
+      background:#000;
+      font-size:20px;
+      overflow:hidden;
+      color: #fff;
+    }
+
+    code{
+
+      background-color: rgba(255,255,255,.2);
+      display: inline-block;
+      padding:0px 20px;
+      width:90%;
+      overflow:auto;
+      font-size:14px;
+
+    }
+
+    code.inline{
+      width:auto;
+      padding:0px 0px;
+      display:inline;
+    }
+
+    #header{
+      width:100%;
+      background:#000;
+      padding:10px;
+      border-bottom:1px solid white;
+    }
+
+    #header > div, #header > div > a{
+      font-size:25px;
+      color:#fff;
+      display:inline;
+      padding:10px;
+    }
+
+    #slideControls{
+      position:absolute;
+      left: 420px;
+      top:0px;
+    }
+
+    #socialLinks{
+        position:absolute;
+        right:10px;
+        bottom:10px;
+
+      }
+
+    #socialLinks > a{
+      display:inline-block;
+      width: 25px;
+      height: 25px;
+      margin-top:-7px;
+      float:right;
+      padding:5px;
+      margin:5px;
+
+      background:#333;
+    }
+
+       #socialLinks > a > img {
+      
+        width:100%;
+        height:100%;
+        opacity:.7;
+        margin:0px;
+
+
+      }
+
+      #socialLinks > a:hover{
+        opacity:1;
+      }
+
+
+  
+    #header > div > a{
+      background:#333;
+    }
+
+
+    .inactiveSlide{
+
+      display:none;
+    }
+
+    .activeSlide{
+  
+      padding:50px;
+      width:40%;
+      top: 10%;
+      height:80%;
+      overflow:auto;
+      color:#fff;
+      background-color: rgba(0 , 0 , 0 ,.8);
+    
+
+    }
+
+    #scene{
+
+      position:absolute;
+      top:0px;
+      left:0px;
+      z-index:-99;
+    }
+
+    #GUI{
+
+      position:absolute;
+      right:0px;
+      width:500px;
+      height:500px;
+      display:block;
+      background:#111;
+
+    }
+
+    #info{
+      height:100%;
+      overflow:auto;
+
+    }
+    .cameraControlGUI{
+
+    }
+    a{
+      color:#fff;
+      text-decoration:none;
+      opacity: .7;
+    }
+
+    a:hover{
+      text-decoration:underline;
+      opacity:1;
+    }
+
+    ::-webkit-scrollbar {
+        width: 12px;
+    }
+   
+    ::-webkit-scrollbar-track {
+        -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); 
+        border-radius: 10px;
+    }
+   
+    ::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5); 
+    }
+
+    @font-face {
+      font-family: "GeoSans";
+      src: url"static/src/GeosansLight.ttf");
+    }
+
+    .inactiveGui{
+      display:none;
+    }
+  </style>
+</head>
+
+<body>
+  <script src="static/src/three.js"></script>
+  <script src="static/src/Detector.js"></script>
+  <script src="static/src/stats.min.js"></script>
+  <script src="static/src/dat.gui.min.js"></script>
+  <script src="static/src/dotgraph.js"></script>
+  <script src="static/src/dotparser.js"></script>
+
+  <script id="vertexShaderFDG" type="x-shader/x-vertex">
+    uniform sampler2D texture1;
+    uniform float firstVertex;
+    uniform float density;
+    attribute vec4 color;
+    varying vec3 vForce;
+
+    void main() {
+      vec3 pos1 = texture2D(texture1, color.xy).xyz;
+      vec3 pos2 = texture2D(texture1, color.zw).xyz;
+      gl_PointSize = 1.0;
+      if (firstVertex > 0.5) {
+        vForce = (density * (pos2 - pos1));
+        gl_Position = vec4(color.x * 2. - 1., color.y * 2. - 1., 0., 1.);
+      } else {
+        vForce = (density * (pos1 - pos2));
+        gl_Position = vec4(color.z * 2. - 1., color.w * 2. - 1., 0., 1.);
+      }
+      // vForce = clamp(vForce, vec3(-2.5), vec3(2.5));
+    }
+  </script>
+
+  <script id="fragmentShaderFDG" type="x-shader/x-fragment">
+    varying vec3 vForce;
+    void main() {
+      gl_FragColor = vec4(vForce, 1.);
+    }
+  </script>
+
+  <script id="fragmentShaderFDGPos" type="x-shader/x-fragment">
+    varying vec2 vUv;
+    uniform sampler2D tPosition;
+    uniform sampler2D tForces;
+    uniform float strength;
+
+    const float d_width = 1. / ${WIDTH}.;
+    const float d_height = 1. / ${HEIGHT}.;
+
+    void main() {
+      vec4 pos = texture2D(tPosition, vUv);
+
+      if (pos.a > 0.5) {
+        vec3 fl = texture2D(tForces, vUv).xyz;
+        vec3 f = vec3(0.);
+        for (float y = d_height * 0.5; y < 1.0; y += d_height) {
+          if (texture2D(tPosition, vec2(0., y)).a > .5) {
+            for (float x = d_width * 0.5; x < 1.0; x += d_width) {
+              vec4 oPos = texture2D(tPosition, vec2(x, y));
+              vec3 diff = pos.xyz - oPos.xyz;
+              float a = length(diff) + 10.;
+              f += oPos.a * diff / pow(a, 2.8);
+            }
+          }
+        }
+        // f = clamp(f, vec3(-2.5), vec3(2.5));
+        vec3 newPos = pos.xyz + fl + f * strength;
+        gl_FragColor = vec4(newPos.xyz, pos.a);
+      } else {
+        gl_FragColor = vec4(0.);
+      }
+    }
+
+  </script>
+
+  <script src="static/src/leap.min.js"></script>
+  <script src="static/src/ForceDirectedGraph.js"></script>
+  <script src="static/src/LeapUtils.js"></script>
+  <script src="static/src/TextCreator.js"></script>
+  <script src="static/src/camera.js"></script>
+  <script src="static/src/TrackballControls.js"></script>
+  <script src="static/src/LeapSpringControls.js"></script>
+  <script src="static/src/LeapEyeLookControls.js"></script>
+
+  <script>
+    if (!Detector.webgl) Detector.addGetWebGLMessage();
+
+    var container, stats;
+    var camera, scene, renderer, particles, geometry, simulatorMaterial, parameters, i, h, color;
+
+    var fallbackControls;
+
+    // Leap Variables to be used as uniforms for exploration
+    var gFingerPos;    // vec3 for uniforms
+    var gFingerMarker; // marker for LEAP_FINGER_POS
+
+    var mouseX = 0,
+      mouseY = 0;
+
+    var windowHalfX = window.innerWidth / 2;
+    var windowHalfY = window.innerHeight / 2;
+
+    var rainbowHand;  // RIGGEDHANDRIGGEDHANDRIGGEDHANDRIGGEDHAND
+
+    window.addEventListener('load', function () {
+      init();
+      animate();
+      function cancel(e) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+      
+      window.addEventListener('dragover', cancel, false);
+      window.addEventListener('dragenter', cancel, false);
+      window.addEventListener('drop', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        var dt = e.dataTransfer;
+        var files = dt.files;
+        
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            var reader = new FileReader();
+            reader.onload = function(e) {
+              // console.log(e.target.result)
+              world.position.set(0,0,0);
+              graph.reset();
+              graph.parseDot(e.target.result);
+              // graph.parseGrp(e.target.result);
+            }
+            reader.readAsText(file);
+          }
+        
+      }, false);
+    }, false);
+
+    function init() {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 20000);
+      camera.position.z = 1000;
+
+      scene = new THREE.Scene();
+      world = new THREE.Object3D();
+      scene.add(world);
+
+      var map = THREE.ImageUtils.loadTexture( 'static/src/simplexSphereMap.jpg' );
+      var geo = new THREE.SphereGeometry( 5000 , 50 , 50 );
+      var mat = new THREE.MeshBasicMaterial({map:map,side:THREE.BackSide});
+      skybox = new THREE.Mesh( geo , mat );
+      //scene.add( skybox );
+
+      // Setting up Leap Variables
+      controller = new Leap.Controller();
+      controller.connect();
+
+      gFingerPos = new THREE.Vector3();
+      var g = new THREE.IcosahedronGeometry( 5 , 1 );
+      var m = new THREE.MeshNormalMaterial();
+      // gFingerMarker = new THREE.Mesh( g , m );
+      // scene.add( gFingerMarker );
+      // gFingerMarker.position = gFingerPos;
+
+      controls = new THREE.LeapEyeLookControls(camera, controller,scene);
+      controls.lookSpeed = 0.005;
+      controls.eyeSpeed = 0.005;
+
+
+
+      fallbackControls = new THREE.TrackballControls( camera );
+
+
+
+
+
+
+      var mesh = new THREE.Mesh(
+        new THREE.IcosahedronGeometry( 10 , 1 ),
+        new THREE.MeshNormalMaterial({
+          transparent: true,
+          opacity: 1.5
+        })
+      );
+
+      console.log( controls );
+      controls.addLookMarker( mesh );
+      // controls.decayTranslate = .99;
+      /*controls.add('pinchRotate', new Control(
+        Activations.pinch('left', .2),
+        Interpreters.palmOrbit(),
+        Mappings.toVec('orbit')));
+        
+      controls.add('pinchTrans', new Control(
+        Activations.pinch('right', 4),
+        Interpreters.palmPosition(),
+        Mappings.toVec('translate')));*/
+
+      renderer = new THREE.WebGLRenderer();
+      // _gl = renderer.context;
+
+      renderer.setClearColor(0, 0);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      window.addEventListener( 'resize' , onResize , false );
+      window.addEventListener( 'keypress' , onKeypress , false );
+      container.appendChild(renderer.domElement);
+
+      var vst = document.getElementById('vertexShaderFDG').textContent;
+      var fst = document.getElementById('fragmentShaderFDG').textContent;
+      var pfs = document.getElementById('fragmentShaderFDGPos').textContent;
+
+     
+      var edges = [0,1,0,2,1,3,2,3,0,4,1,4,2,4,3,4,0,5,1,5,2,5,3,5];
+
+      var textCreator = new TextCreator();
+      graph = new ForceDirectedGraph(renderer, world, vst, fst, pfs , textCreator );
+      loadInheritance();
+      // graph.init(1000, grid3(10, 10, 10))
+      // graph.init(20*20*20, grid3(20, 20, 20));
+      // graph.init(2*2*2, grid3(2,2,2));
+      // graph.init(31, balancedTree(4, 2))
+      // graph.init(2047, balancedTree(10, 2))
+      // graph.init(8191, balancedTree(12, 2))
+      // graph.init(16383, balancedTree(13, 2))
+      // graph.init(4, balancedTree(1, 3))
+      // graph.init(13, balancedTree(2, 3))
+      // graph.init(1093, balancedTree(6, 3))
+      // graph.init(9841, balancedTree(8, 3))
+      // graph.init(1025, sphere(1024))
+      // graph.init(101, sphere(100))
+    }
+    
+    function loadInheritance() {
+      world.position.set(0,0,0);
+      world.scale.set(1, 1, 1);
+      graph.reset();
+      graph.edgeForce = 0.01;
+      graph.vertexForce = 150;
+      camera.position.z = 1000;
+
+      
+      controls.lookSpeed = .005;
+      controls.eyeSpeed = .005;
+      var text = document.getElementById('inherit').textContent;
+      graph.parseDot(text);
+    }
+    
+    function loadGrid() {
+      world.position.set(0,0,0);
+      world.scale.set(1, 1, 1);
+      graph.reset();
+      graph.edgeForce = 0.05;
+      graph.vertexForce = 400;
+      camera.position.z = 2000;
+      
+      controls.lookSpeed = .01;
+      controls.eyeSpeed = .01;
+
+      graph.init(1000, grid3(10, 10, 10));
+    }
+    
+    function loadTree() {
+      world.position.set(0,0,0);
+      world.scale.set(1, 1, 1);
+      graph.reset()
+      graph.edgeForce = 0.05;
+      graph.vertexForce = 400;
+      camera.position.z = 3000;
+
+      controls.lookSpeed = .02;
+      controls.eyeSpeed = .02;
+      graph.init(2047, balancedTree(10, 2));
+    }
+    
+    function loadNV() {
+      world.position.set(0,0,0);
+      world.scale.set(.2, .2, .2);
+      graph.reset()
+
+      graph.edgeForce = 0.001;
+      graph.vertexForce = 800;
+      camera.position.z = 2000;
+
+      
+      controls.lookSpeed = .02;
+      controls.eyeSpeed = .02;
+      
+      var text = document.getElementById('nvgraph').textContent;
+      graph.parseGrp(text);
+      graph.particles.material.uniforms.size.value = 5;
+    }
+    
+    function grid3(n, m, z) {
+      if (n < 1 || m < 1 || z < 1) {
+        throw new Error("Invalid number of nodes in grid3 graph");
+      }
+      var g = [],
+          i, j, k;
+
+      for (k = 0; k < z; ++k) {
+        for (i = 0; i < n; ++i) {
+          for (j = 0; j < m; ++j) {
+            var level = k * n * m;
+            var node = i + j * n + level;
+            if (i > 0) { g.push(node, i - 1 + j * n + level); }
+            if (j > 0) { g.push(node, i + (j - 1) * n + level); }
+            if (k > 0) { g.push(node, i + j * n + (k - 1) * n * m ); }
+          }
+        }
+      }
+    return g;
+    }
+
+    function sphere(n) {
+      var g = [];
+      for (var i = 1; i <= n; i++) {
+        g.push(0, i);
+      }
+      return g;
+    }
+
+    function balancedTree(n, b) {
+      if (n < 0) {
+        throw new Error("Invalid number of nodes in balanced tree");
+      }
+      var g = [],
+        count = ((Math.pow(b, n + 1) - 1) / (b - 1) + 1) / b - 1,
+        level;
+
+      for (level = 0; level < count; ++level) {
+        var root = level;
+
+        for (var i = 1; i <= b; i++) {
+          g.push(root, root * b + i);
+        }
+      }
+      // console.log(count, g)
+      return g;
+    }
+
+    function onResize() {
+
+      windowHalfX = window.innerWidth / 2;
+      windowHalfY = window.innerHeight / 2;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function onKeypress(e){
+     
+      console.log( e.charCode );
+      if( e.charCode == 120 || e.charCode == 88){
+        toggleInfo();
+      }
+    }
+
+function toggleInfo(){
+
+   var info = document.getElementById( 'info' );
+
+        if( info.style.display != 'none' ){
+          info.style.display = 'none';
+        }else{
+          info.style.display = 'block';
+        }
+
+
+}
+
+    function animate() {
+      requestAnimationFrame(animate);
+      render();
+    }
+
+    var isPaused = false;
+    function render() {
+      controls.update();
+
+      if( !controller.frame().valid ){
+        fallbackControls.update();
+      }
+
+      rainbowHand && rainbowHand.update();
+
+      if (graph.inited && !isPaused) {
+        graph.computeForces();
+        graph.updatePositions();
+        // graph.runPicker();
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function setupQuad(width, height) {
+      material = new THREE.MeshBasicMaterial({
+        map: null,
+        color: 0x888888
+      });
+      plane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+      scene.add(plane);
+    }
+  </script>
+
+  
+ 
+  </div>
+</body>
+<script id="nvgraph" type="dot">
+graph: {
+title: "Call flow of nvoglv64.dll"
+// IDA palette
+colorentry 32: 0 0 0
+colorentry 33: 0 0 255
+colorentry 34: 0 0 255
+colorentry 35: 128 128 128
+colorentry 36: 128 128 128
+colorentry 37: 0 0 128
+colorentry 38: 0 0 128
+colorentry 39: 0 0 255
+colorentry 40: 0 0 255
+colorentry 41: 0 0 128
+colorentry 42: 0 128 0
+colorentry 43: 0 255 0
+colorentry 44: 0 128 0
+colorentry 45: 255 128 0
+colorentry 46: 0 128 0
+colorentry 47: 128 128 255
+colorentry 48: 255 0 0
+colorentry 49: 128 128 0
+colorentry 50: 1 1 1
+colorentry 51: 192 192 192
+colorentry 52: 0 0 255
+colorentry 53: 0 0 255
+colorentry 54: 0 0 255
+colorentry 55: 128 128 128
+colorentry 56: 128 128 255
+colorentry 57: 0 128 0
+colorentry 58: 0 0 128
+colorentry 59: 0 0 255
+colorentry 60: 128 0 128
+colorentry 61: 0 128 0
+colorentry 62: 0 128 0
+colorentry 63: 0 128 64
+colorentry 64: 0 0 128
+colorentry 65: 0 0 128
+colorentry 66: 255 0 255
+colorentry 67: 128 128 0
+colorentry 68: 0 0 128
+colorentry 69: 0 0 255
+colorentry 70: 0 0 128
+colorentry 71: 0 0 255
+colorentry 72: 0 0 0
+colorentry 73: 255 255 255
+colorentry 74: 192 187 175
+colorentry 75: 0 255 255
+colorentry 76: 0 0 0
+colorentry 77: 128 0 0
+colorentry 78: 128 128 128
+colorentry 79: 128 128 0
+colorentry 80: 255 0 255
+colorentry 81: 0 0 0
+colorentry 82: 0 0 255
+colorentry 83: 0 0 0
+
+}
+  
+</script>
+
+<script id="inherit" type="dot">
+digraph "Graphical Class Hierarchy"
+{
+US ;
+AK ;
+US -> AK ;
+AleutiansEast ;
+AK -> AleutiansEast ;
+AleutiansWest ;
+AK -> AleutiansWest ;
+Anchorage ;
+AK -> Anchorage ;
+Bethel ;
+AK -> Bethel ;
+BristolBay ;
+AK -> BristolBay ;
+Denali ;
+AK -> Denali ;
+Dillingham ;
+AK -> Dillingham ;
+FairbanksNorthStar ;
+AK -> FairbanksNorthStar ;
+Haines ;
+AK -> Haines ;
+HoonahAngoon ;
+AK -> HoonahAngoon ;
+Juneau ;
+AK -> Juneau ;
+KenaiPeninsula ;
+AK -> KenaiPeninsula ;
+KetchikanGateway ;
+AK -> KetchikanGateway ;
+KodiakIsland ;
+AK -> KodiakIsland ;
+LakeandPeninsula ;
+AK -> LakeandPeninsula ;
+MatanuskaSusitna ;
+AK -> MatanuskaSusitna ;
+Nome ;
+AK -> Nome ;
+NorthSlope ;
+AK -> NorthSlope ;
+NorthwestArctic ;
+AK -> NorthwestArctic ;
+Petersburg ;
+AK -> Petersburg ;
+PrinceWalesHyder ;
+AK -> PrinceWalesHyder ;
+Sitka ;
+AK -> Sitka ;
+Skagway ;
+AK -> Skagway ;
+SoutheastFairbanks ;
+AK -> SoutheastFairbanks ;
+ValdezCordova ;
+AK -> ValdezCordova ;
+WadeHampton ;
+AK -> WadeHampton ;
+Wrangell ;
+AK -> Wrangell ;
+Yakutat ;
+AK -> Yakutat ;
+YukonKoyukuk ;
+AK -> YukonKoyukuk ;
+CA ;
+US -> CA ;
+Alameda ;
+CA -> Alameda ;
+Alpine ;
+CA -> Alpine ;
+Amador ;
+CA -> Amador ;
+Butte ;
+CA -> Butte ;
+Calaveras ;
+CA -> Calaveras ;
+Colusa ;
+CA -> Colusa ;
+ContraCosta ;
+CA -> ContraCosta ;
+DelNorte ;
+CA -> DelNorte ;
+ElDorado ;
+CA -> ElDorado ;
+Fresno ;
+CA -> Fresno ;
+Glenn ;
+CA -> Glenn ;
+Humboldt ;
+CA -> Humboldt ;
+Imperial ;
+CA -> Imperial ;
+Inyo ;
+CA -> Inyo ;
+Kern ;
+CA -> Kern ;
+Kings ;
+CA -> Kings ;
+Lake ;
+CA -> Lake ;
+Lassen ;
+CA -> Lassen ;
+LosAngeles ;
+CA -> LosAngeles ;
+Madera ;
+CA -> Madera ;
+Marin ;
+CA -> Marin ;
+Mariposa ;
+CA -> Mariposa ;
+Mendocino ;
+CA -> Mendocino ;
+Merced ;
+CA -> Merced ;
+Modoc ;
+CA -> Modoc ;
+Mono ;
+CA -> Mono ;
+Monterey ;
+CA -> Monterey ;
+Napa ;
+CA -> Napa ;
+Nevada ;
+CA -> Nevada ;
+Orange ;
+CA -> Orange ;
+Placer ;
+CA -> Placer ;
+Plumas ;
+CA -> Plumas ;
+Riverside ;
+CA -> Riverside ;
+Sacramento ;
+CA -> Sacramento ;
+SanBenito ;
+CA -> SanBenito ;
+SanBernardino ;
+CA -> SanBernardino ;
+SanDiego ;
+CA -> SanDiego ;
+SanFrancisco ;
+CA -> SanFrancisco ;
+SanJoaquin ;
+CA -> SanJoaquin ;
+SanLuisObispo ;
+CA -> SanLuisObispo ;
+SanMateo ;
+CA -> SanMateo ;
+SantaBarbara ;
+CA -> SantaBarbara ;
+SantaClara ;
+CA -> SantaClara ;
+SantaCruz ;
+CA -> SantaCruz ;
+Shasta ;
+CA -> Shasta ;
+Sierra ;
+CA -> Sierra ;
+Siskiyou ;
+CA -> Siskiyou ;
+Solano ;
+CA -> Solano ;
+Sonoma ;
+CA -> Sonoma ;
+Stanislaus ;
+CA -> Stanislaus ;
+Sutter ;
+CA -> Sutter ;
+Tehama ;
+CA -> Tehama ;
+Trinity ;
+CA -> Trinity ;
+Tulare ;
+CA -> Tulare ;
+Tuolumne ;
+CA -> Tuolumne ;
+Ventura ;
+CA -> Ventura ;
+Yolo ;
+CA -> Yolo ;
+Yuba ;
+CA -> Yuba ;
+FL ;
+US -> FL ;
+Alachua ;
+FL -> Alachua ;
+Baker ;
+FL -> Baker ;
+Bay ;
+FL -> Bay ;
+Bradford ;
+FL -> Bradford ;
+Brevard ;
+FL -> Brevard ;
+Broward ;
+FL -> Broward ;
+Calhoun ;
+FL -> Calhoun ;
+Charlotte ;
+FL -> Charlotte ;
+Citrus ;
+FL -> Citrus ;
+Clay ;
+FL -> Clay ;
+Collier ;
+FL -> Collier ;
+Columbia ;
+FL -> Columbia ;
+DeSoto ;
+FL -> DeSoto ;
+Dixie ;
+FL -> Dixie ;
+Duval ;
+FL -> Duval ;
+Escambia ;
+FL -> Escambia ;
+Flagler ;
+FL -> Flagler ;
+Franklin ;
+FL -> Franklin ;
+Gadsden ;
+FL -> Gadsden ;
+Gilchrist ;
+FL -> Gilchrist ;
+Glades ;
+FL -> Glades ;
+Gulf ;
+FL -> Gulf ;
+Hamilton ;
+FL -> Hamilton ;
+Hardee ;
+FL -> Hardee ;
+Hendry ;
+FL -> Hendry ;
+Hernando ;
+FL -> Hernando ;
+Highlands ;
+FL -> Highlands ;
+Hillsborough ;
+FL -> Hillsborough ;
+Holmes ;
+FL -> Holmes ;
+IndianRiver ;
+FL -> IndianRiver ;
+Jackson ;
+FL -> Jackson ;
+Jefferson ;
+FL -> Jefferson ;
+Lafayette ;
+FL -> Lafayette ;
+Lake ;
+FL -> Lake ;
+Lee ;
+FL -> Lee ;
+Leon ;
+FL -> Leon ;
+Levy ;
+FL -> Levy ;
+Liberty ;
+FL -> Liberty ;
+Madison ;
+FL -> Madison ;
+Manatee ;
+FL -> Manatee ;
+Marion ;
+FL -> Marion ;
+Martin ;
+FL -> Martin ;
+MiamiDade ;
+FL -> MiamiDade ;
+Monroe ;
+FL -> Monroe ;
+Nassau ;
+FL -> Nassau ;
+Okaloosa ;
+FL -> Okaloosa ;
+Okeechobee ;
+FL -> Okeechobee ;
+Orange ;
+FL -> Orange ;
+Osceola ;
+FL -> Osceola ;
+PalmBeach ;
+FL -> PalmBeach ;
+Pasco ;
+FL -> Pasco ;
+Pinellas ;
+FL -> Pinellas ;
+Polk ;
+FL -> Polk ;
+Putnam ;
+FL -> Putnam ;
+StJohns ;
+FL -> StJohns ;
+StLucie ;
+FL -> StLucie ;
+SantaRosa ;
+FL -> SantaRosa ;
+Sarasota ;
+FL -> Sarasota ;
+Seminole ;
+FL -> Seminole ;
+Sumter ;
+FL -> Sumter ;
+Suwannee ;
+FL -> Suwannee ;
+Taylor ;
+FL -> Taylor ;
+Union ;
+FL -> Union ;
+Volusia ;
+FL -> Volusia ;
+Wakulla ;
+FL -> Wakulla ;
+Walton ;
+FL -> Walton ;
+Washington ;
+FL -> Washington ;
+MD ;
+US -> MD ;
+Allegany ;
+MD -> Allegany ;
+AnneArundel ;
+MD -> AnneArundel ;
+Baltimore ;
+MD -> Baltimore ;
+Calvert ;
+MD -> Calvert ;
+Caroline ;
+MD -> Caroline ;
+Carroll ;
+MD -> Carroll ;
+Cecil ;
+MD -> Cecil ;
+Charles ;
+MD -> Charles ;
+Dorchester ;
+MD -> Dorchester ;
+Frederick ;
+MD -> Frederick ;
+Garrett ;
+MD -> Garrett ;
+Harford ;
+MD -> Harford ;
+Howard ;
+MD -> Howard ;
+Kent ;
+MD -> Kent ;
+Montgomery ;
+MD -> Montgomery ;
+PrinceGeorges ;
+MD -> PrinceGeorges ;
+QueenAnnes ;
+MD -> QueenAnnes ;
+StMarys ;
+MD -> StMarys ;
+Somerset ;
+MD -> Somerset ;
+Talbot ;
+MD -> Talbot ;
+Washington ;
+MD -> Washington ;
+Wicomico ;
+MD -> Wicomico ;
+Worcester ;
+MD -> Worcester ;
+Baltimorecity ;
+MD -> Baltimorecity ;
+NJ ;
+US -> NJ ;
+Atlantic ;
+NJ -> Atlantic ;
+Bergen ;
+NJ -> Bergen ;
+Burlington ;
+NJ -> Burlington ;
+Camden ;
+NJ -> Camden ;
+CapeMay ;
+NJ -> CapeMay ;
+Cumberland ;
+NJ -> Cumberland ;
+Essex ;
+NJ -> Essex ;
+Gloucester ;
+NJ -> Gloucester ;
+Hudson ;
+NJ -> Hudson ;
+Hunterdon ;
+NJ -> Hunterdon ;
+Mercer ;
+NJ -> Mercer ;
+Middlesex ;
+NJ -> Middlesex ;
+Monmouth ;
+NJ -> Monmouth ;
+Morris ;
+NJ -> Morris ;
+Ocean ;
+NJ -> Ocean ;
+Passaic ;
+NJ -> Passaic ;
+Salem ;
+NJ -> Salem ;
+Somerset ;
+NJ -> Somerset ;
+Sussex ;
+NJ -> Sussex ;
+Union ;
+NJ -> Union ;
+Warren ;
+NJ -> Warren ;
+NC ;
+US -> NC ;
+Alamance ;
+NC -> Alamance ;
+Alexander ;
+NC -> Alexander ;
+Alleghany ;
+NC -> Alleghany ;
+Anson ;
+NC -> Anson ;
+Ashe ;
+NC -> Ashe ;
+Avery ;
+NC -> Avery ;
+Beaufort ;
+NC -> Beaufort ;
+Bertie ;
+NC -> Bertie ;
+Bladen ;
+NC -> Bladen ;
+Brunswick ;
+NC -> Brunswick ;
+Buncombe ;
+NC -> Buncombe ;
+Burke ;
+NC -> Burke ;
+Cabarrus ;
+NC -> Cabarrus ;
+Caldwell ;
+NC -> Caldwell ;
+Camden ;
+NC -> Camden ;
+Carteret ;
+NC -> Carteret ;
+Caswell ;
+NC -> Caswell ;
+Catawba ;
+NC -> Catawba ;
+Chatham ;
+NC -> Chatham ;
+Cherokee ;
+NC -> Cherokee ;
+Chowan ;
+NC -> Chowan ;
+Clay ;
+NC -> Clay ;
+Cleveland ;
+NC -> Cleveland ;
+Columbus ;
+NC -> Columbus ;
+Craven ;
+NC -> Craven ;
+Cumberland ;
+NC -> Cumberland ;
+Currituck ;
+NC -> Currituck ;
+Dare ;
+NC -> Dare ;
+Davidson ;
+NC -> Davidson ;
+Davie ;
+NC -> Davie ;
+Duplin ;
+NC -> Duplin ;
+Durham ;
+NC -> Durham ;
+Edgecombe ;
+NC -> Edgecombe ;
+Forsyth ;
+NC -> Forsyth ;
+Franklin ;
+NC -> Franklin ;
+Gaston ;
+NC -> Gaston ;
+Gates ;
+NC -> Gates ;
+Graham ;
+NC -> Graham ;
+Granville ;
+NC -> Granville ;
+Greene ;
+NC -> Greene ;
+Guilford ;
+NC -> Guilford ;
+Halifax ;
+NC -> Halifax ;
+Harnett ;
+NC -> Harnett ;
+Haywood ;
+NC -> Haywood ;
+Henderson ;
+NC -> Henderson ;
+Hertford ;
+NC -> Hertford ;
+Hoke ;
+NC -> Hoke ;
+Hyde ;
+NC -> Hyde ;
+Iredell ;
+NC -> Iredell ;
+Jackson ;
+NC -> Jackson ;
+Johnston ;
+NC -> Johnston ;
+Jones ;
+NC -> Jones ;
+Lee ;
+NC -> Lee ;
+Lenoir ;
+NC -> Lenoir ;
+Lincoln ;
+NC -> Lincoln ;
+McDowell ;
+NC -> McDowell ;
+Macon ;
+NC -> Macon ;
+Madison ;
+NC -> Madison ;
+Martin ;
+NC -> Martin ;
+Mecklenburg ;
+NC -> Mecklenburg ;
+Mitchell ;
+NC -> Mitchell ;
+Montgomery ;
+NC -> Montgomery ;
+Moore ;
+NC -> Moore ;
+Nash ;
+NC -> Nash ;
+NewHanover ;
+NC -> NewHanover ;
+Northampton ;
+NC -> Northampton ;
+Onslow ;
+NC -> Onslow ;
+Orange ;
+NC -> Orange ;
+Pamlico ;
+NC -> Pamlico ;
+Pasquotank ;
+NC -> Pasquotank ;
+Pender ;
+NC -> Pender ;
+Perquimans ;
+NC -> Perquimans ;
+Person ;
+NC -> Person ;
+Pitt ;
+NC -> Pitt ;
+Polk ;
+NC -> Polk ;
+Randolph ;
+NC -> Randolph ;
+Richmond ;
+NC -> Richmond ;
+Robeson ;
+NC -> Robeson ;
+Rockingham ;
+NC -> Rockingham ;
+Rowan ;
+NC -> Rowan ;
+Rutherford ;
+NC -> Rutherford ;
+Sampson ;
+NC -> Sampson ;
+Scotland ;
+NC -> Scotland ;
+Stanly ;
+NC -> Stanly ;
+Stokes ;
+NC -> Stokes ;
+Surry ;
+NC -> Surry ;
+Swain ;
+NC -> Swain ;
+Transylvania ;
+NC -> Transylvania ;
+Tyrrell ;
+NC -> Tyrrell ;
+Union ;
+NC -> Union ;
+Vance ;
+NC -> Vance ;
+Wake ;
+NC -> Wake ;
+Warren ;
+NC -> Warren ;
+Washington ;
+NC -> Washington ;
+Watauga ;
+NC -> Watauga ;
+Wayne ;
+NC -> Wayne ;
+Wilkes ;
+NC -> Wilkes ;
+Wilson ;
+NC -> Wilson ;
+Yadkin ;
+NC -> Yadkin ;
+Yancey ;
+NC -> Yancey ;
+OH ;
+US -> OH ;
+Adams ;
+OH -> Adams ;
+Allen ;
+OH -> Allen ;
+Ashland ;
+OH -> Ashland ;
+Ashtabula ;
+OH -> Ashtabula ;
+Athens ;
+OH -> Athens ;
+Auglaize ;
+OH -> Auglaize ;
+Belmont ;
+OH -> Belmont ;
+Brown ;
+OH -> Brown ;
+Butler ;
+OH -> Butler ;
+Carroll ;
+OH -> Carroll ;
+Champaign ;
+OH -> Champaign ;
+Clark ;
+OH -> Clark ;
+Clermont ;
+OH -> Clermont ;
+Clinton ;
+OH -> Clinton ;
+Columbiana ;
+OH -> Columbiana ;
+Coshocton ;
+OH -> Coshocton ;
+Crawford ;
+OH -> Crawford ;
+Cuyahoga ;
+OH -> Cuyahoga ;
+Darke ;
+OH -> Darke ;
+Defiance ;
+OH -> Defiance ;
+Delaware ;
+OH -> Delaware ;
+Erie ;
+OH -> Erie ;
+Fairfield ;
+OH -> Fairfield ;
+Fayette ;
+OH -> Fayette ;
+Franklin ;
+OH -> Franklin ;
+Fulton ;
+OH -> Fulton ;
+Gallia ;
+OH -> Gallia ;
+Geauga ;
+OH -> Geauga ;
+Greene ;
+OH -> Greene ;
+Guernsey ;
+OH -> Guernsey ;
+Hamilton ;
+OH -> Hamilton ;
+Hancock ;
+OH -> Hancock ;
+Hardin ;
+OH -> Hardin ;
+Harrison ;
+OH -> Harrison ;
+Henry ;
+OH -> Henry ;
+Highland ;
+OH -> Highland ;
+Hocking ;
+OH -> Hocking ;
+Holmes ;
+OH -> Holmes ;
+Huron ;
+OH -> Huron ;
+Jackson ;
+OH -> Jackson ;
+Jefferson ;
+OH -> Jefferson ;
+Knox ;
+OH -> Knox ;
+Lake ;
+OH -> Lake ;
+Lawrence ;
+OH -> Lawrence ;
+Licking ;
+OH -> Licking ;
+Logan ;
+OH -> Logan ;
+Lorain ;
+OH -> Lorain ;
+Lucas ;
+OH -> Lucas ;
+Madison ;
+OH -> Madison ;
+Mahoning ;
+OH -> Mahoning ;
+Marion ;
+OH -> Marion ;
+Medina ;
+OH -> Medina ;
+Meigs ;
+OH -> Meigs ;
+Mercer ;
+OH -> Mercer ;
+Miami ;
+OH -> Miami ;
+Monroe ;
+OH -> Monroe ;
+Montgomery ;
+OH -> Montgomery ;
+Morgan ;
+OH -> Morgan ;
+Morrow ;
+OH -> Morrow ;
+Muskingum ;
+OH -> Muskingum ;
+Noble ;
+OH -> Noble ;
+Ottawa ;
+OH -> Ottawa ;
+Paulding ;
+OH -> Paulding ;
+Perry ;
+OH -> Perry ;
+Pickaway ;
+OH -> Pickaway ;
+Pike ;
+OH -> Pike ;
+Portage ;
+OH -> Portage ;
+Preble ;
+OH -> Preble ;
+Putnam ;
+OH -> Putnam ;
+Richland ;
+OH -> Richland ;
+Ross ;
+OH -> Ross ;
+Sandusky ;
+OH -> Sandusky ;
+Scioto ;
+OH -> Scioto ;
+Seneca ;
+OH -> Seneca ;
+Shelby ;
+OH -> Shelby ;
+Stark ;
+OH -> Stark ;
+Summit ;
+OH -> Summit ;
+Trumbull ;
+OH -> Trumbull ;
+Tuscarawas ;
+OH -> Tuscarawas ;
+Union ;
+OH -> Union ;
+VanWert ;
+OH -> VanWert ;
+Vinton ;
+OH -> Vinton ;
+Warren ;
+OH -> Warren ;
+Washington ;
+OH -> Washington ;
+Wayne ;
+OH -> Wayne ;
+Williams ;
+OH -> Williams ;
+Wood ;
+OH -> Wood ;
+Wyandot ;
+OH -> Wyandot ;
+PA ;
+US -> PA ;
+Adams ;
+PA -> Adams ;
+Allegheny ;
+PA -> Allegheny ;
+Armstrong ;
+PA -> Armstrong ;
+Beaver ;
+PA -> Beaver ;
+Bedford ;
+PA -> Bedford ;
+Berks ;
+PA -> Berks ;
+Blair ;
+PA -> Blair ;
+Bradford ;
+PA -> Bradford ;
+Bucks ;
+PA -> Bucks ;
+Butler ;
+PA -> Butler ;
+Cambria ;
+PA -> Cambria ;
+Cameron ;
+PA -> Cameron ;
+Carbon ;
+PA -> Carbon ;
+Centre ;
+PA -> Centre ;
+Chester ;
+PA -> Chester ;
+Clarion ;
+PA -> Clarion ;
+Clearfield ;
+PA -> Clearfield ;
+Clinton ;
+PA -> Clinton ;
+Columbia ;
+PA -> Columbia ;
+Crawford ;
+PA -> Crawford ;
+Cumberland ;
+PA -> Cumberland ;
+Dauphin ;
+PA -> Dauphin ;
+Delaware ;
+PA -> Delaware ;
+Elk ;
+PA -> Elk ;
+Erie ;
+PA -> Erie ;
+Fayette ;
+PA -> Fayette ;
+Forest ;
+PA -> Forest ;
+Franklin ;
+PA -> Franklin ;
+Fulton ;
+PA -> Fulton ;
+Greene ;
+PA -> Greene ;
+Huntingdon ;
+PA -> Huntingdon ;
+Indiana ;
+PA -> Indiana ;
+Jefferson ;
+PA -> Jefferson ;
+Juniata ;
+PA -> Juniata ;
+Lackawanna ;
+PA -> Lackawanna ;
+Lancaster ;
+PA -> Lancaster ;
+Lawrence ;
+PA -> Lawrence ;
+Lebanon ;
+PA -> Lebanon ;
+Lehigh ;
+PA -> Lehigh ;
+Luzerne ;
+PA -> Luzerne ;
+Lycoming ;
+PA -> Lycoming ;
+McKean ;
+PA -> McKean ;
+Mercer ;
+PA -> Mercer ;
+Mifflin ;
+PA -> Mifflin ;
+Monroe ;
+PA -> Monroe ;
+Montgomery ;
+PA -> Montgomery ;
+Montour ;
+PA -> Montour ;
+Northampton ;
+PA -> Northampton ;
+Northumberland ;
+PA -> Northumberland ;
+Perry ;
+PA -> Perry ;
+Philadelphia ;
+PA -> Philadelphia ;
+Pike ;
+PA -> Pike ;
+Potter ;
+PA -> Potter ;
+Schuylkill ;
+PA -> Schuylkill ;
+Snyder ;
+PA -> Snyder ;
+Somerset ;
+PA -> Somerset ;
+Sullivan ;
+PA -> Sullivan ;
+Susquehanna ;
+PA -> Susquehanna ;
+Tioga ;
+PA -> Tioga ;
+Union ;
+PA -> Union ;
+Venango ;
+PA -> Venango ;
+Warren ;
+PA -> Warren ;
+Washington ;
+PA -> Washington ;
+Wayne ;
+PA -> Wayne ;
+Westmoreland ;
+PA -> Westmoreland ;
+Wyoming ;
+PA -> Wyoming ;
+York ;
+PA -> York ;
+SC ;
+US -> SC ;
+Abbeville ;
+SC -> Abbeville ;
+Aiken ;
+SC -> Aiken ;
+Allendale ;
+SC -> Allendale ;
+Anderson ;
+SC -> Anderson ;
+Bamberg ;
+SC -> Bamberg ;
+Barnwell ;
+SC -> Barnwell ;
+Beaufort ;
+SC -> Beaufort ;
+Berkeley ;
+SC -> Berkeley ;
+Calhoun ;
+SC -> Calhoun ;
+Charleston ;
+SC -> Charleston ;
+Cherokee ;
+SC -> Cherokee ;
+Chester ;
+SC -> Chester ;
+Chesterfield ;
+SC -> Chesterfield ;
+Clarendon ;
+SC -> Clarendon ;
+Colleton ;
+SC -> Colleton ;
+Darlington ;
+SC -> Darlington ;
+Dillon ;
+SC -> Dillon ;
+Dorchester ;
+SC -> Dorchester ;
+Edgefield ;
+SC -> Edgefield ;
+Fairfield ;
+SC -> Fairfield ;
+Florence ;
+SC -> Florence ;
+Georgetown ;
+SC -> Georgetown ;
+Greenville ;
+SC -> Greenville ;
+Greenwood ;
+SC -> Greenwood ;
+Hampton ;
+SC -> Hampton ;
+Horry ;
+SC -> Horry ;
+Jasper ;
+SC -> Jasper ;
+Kershaw ;
+SC -> Kershaw ;
+Lancaster ;
+SC -> Lancaster ;
+Laurens ;
+SC -> Laurens ;
+Lee ;
+SC -> Lee ;
+Lexington ;
+SC -> Lexington ;
+McCormick ;
+SC -> McCormick ;
+Marion ;
+SC -> Marion ;
+Marlboro ;
+SC -> Marlboro ;
+Newberry ;
+SC -> Newberry ;
+Oconee ;
+SC -> Oconee ;
+Orangeburg ;
+SC -> Orangeburg ;
+Pickens ;
+SC -> Pickens ;
+Richland ;
+SC -> Richland ;
+Saluda ;
+SC -> Saluda ;
+Spartanburg ;
+SC -> Spartanburg ;
+Sumter ;
+SC -> Sumter ;
+Union ;
+SC -> Union ;
+Williamsburg ;
+SC -> Williamsburg ;
+York ;
+SC -> York ;
+
+  }
+  
+</script>
+</html>

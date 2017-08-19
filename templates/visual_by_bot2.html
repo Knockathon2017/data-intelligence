@@ -1,0 +1,136 @@
+<style>
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:300);
+body{width:1000px; background-color: #222}
+h1{font: small-caps 300 2em/1.5em 'Open Sans', sans-serif; text-align: center;margin: 20px auto 0;padding: 0;}
+.land{ fill: #222; }
+.border-states{
+	stroke: #111;
+	fill: none;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+}
+.states{fill: #222;}
+.bubble{fill:red; fill-opacity: .5;}
+.hover{stroke:#666; fill-opacity: .8;}
+
+</style>
+
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+<body>
+	<div class="main_div">
+		<font color='white'><h3>Population of US by County</h3></font>
+		<div class='us_pop'></div>
+	</div>
+</body>
+<script type="text/javascript">
+	
+//https://bost.ocks.org/mike/bubble-map/
+
+var width = 1000,
+	height = 600;
+
+var path = d3.geo.path()
+	.projection(null) //albersUsa projection stated in Make file when creating the topojson data
+
+var radius = d3.scale.sqrt() 
+	.domain([0, 3e6]) // INPUT domain-range of possible input data values
+	//To avoid distortion, make sure that the minimum "domain" and "range" values are both 0
+	.range([0, 60]); // OUTPUT range of possible output values
+
+var arc = d3.svg.arc()
+	.outerRadius(radius)	
+
+var svg = d3.select('.us_pop').append('svg')
+	.attr('height', height)
+	.attr('width', width);
+
+
+var toolTip = d3.select('body')
+	.append('div')
+	.style('position', 'absolute')
+	.style('padding', '0 10px')
+	.style('background', '#fff')
+	.style('opacity', 0)
+  .style('font-family', 'Open Sans')
+	.style('z-index', 1000);
+
+
+// d3.json('https://raw.githubusercontent.com/ameliapower/d3BubbleMap/master/builds/development/js/json/poverty/us.json',
+d3.json('static/uspop.json',
+ function(error, usa){
+	if (error) return console.log(error);
+
+	//build the main land area
+	svg.append('path')
+		.datum(topojson.feature(usa, usa.objects.nation))
+		.attr('class', 'land')
+		.attr('d', path); 
+
+
+	svg.selectAll('.states')
+    // retrieve the features so that id is accessed
+    .data(topojson.feature(usa, usa.objects.counties).features)
+    .enter().append('path')
+    .attr('id', function(d) { return d.id; })
+    .attr("class", "states states-hover")
+    .attr('d', path)
+     
+
+         //add Tool Tip
+    .on('mouseover', function(d, i){
+			toolTip.transition()
+			  .style('opacity', .9)
+			  .style('left', (d3.event.pageX) + 'px')
+			  .style('top', (d3.event.pageY) + 'px')  
+			tempColor = this.style.fill; //store current color
+			
+			if(d.properties.name != null || d.properties.name != undefined){
+				toolTip.html(d.properties.name + ", " + d.properties.population)	
+			} else {
+				toolTip.html("")	
+			}
+		})
+		.on('mouseout', function(){
+			d3.select(this)
+			 .transition().delay(400).duration(800)
+			 .style('opacity', 1)
+			 .style('fill', tempColor)
+		})
+
+
+
+	//build internal state lines
+	svg.append('path')
+		.datum(topojson.mesh(usa, usa.objects.states, function(a, b) { 
+			return a !== b; 
+		})) //topojson.mesh
+		.attr('class', 'border-states')
+		.attr('d', path); 
+
+
+	//show data as layered bubbles
+	svg.append("g")
+		.attr("class", "bubble")
+		.selectAll("circle")
+		.data(topojson.feature(usa, usa.objects.counties).features
+			.sort(function(a, b) { //sort population low to high
+				return b.properties.population - a.properties.population; 
+			}) //sort
+		) //data
+		.enter().append("circle") 
+   .on('mouseover', function(d, i){
+			d3.select(this).attr('class', 'hover')
+		})
+		.on('mouseout', function(d, i){
+			d3.select(this).attr('class', '')
+		})
+		.attr("transform", function(d) { 
+			return "translate(" + path.centroid(d) + ")"; //Computes the projected centroid
+		})
+		.attr("r", function(d) { 
+			return radius(d.properties.population); //radius var with input (domain) and output (range)
+		})
+
+}) //d3.json
+</script>

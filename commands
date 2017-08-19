@@ -1,0 +1,7 @@
+CHECKPOINT_PATH="/media/shivam/disk2/Knockathon/models-master/im2txt/model.ckpt-2000000"
+VOCAB_FILE="/media/shivam/disk2/Knockathon/models-master/im2txt/word_counts.txt"
+
+
+IMAGE_FILE="/media/shivam/disk2/Knockathon/models-master/im2txt/test1.png"
+bazel build -c opt im2txt/run_inference
+bazel-bin/im2txt/run_inference --checkpoint_path=${CHECKPOINT_PATH} --vocab_file=${VOCAB_FILE}   --input_files=${IMAGE_FILE}
