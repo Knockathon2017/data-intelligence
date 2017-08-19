@@ -8,6 +8,7 @@
 *ckpt*
 static/images/
 static/img/
+adjusterimages/
 *.jpg
 *.JPG
 *.png
